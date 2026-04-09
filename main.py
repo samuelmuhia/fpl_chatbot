@@ -409,6 +409,7 @@ def print_help():
   compare <name1>,<name2> - Compare two players by stats
   best <position> - Find the top 3 players in a role (striker, midfielder, defender, goalkeeper)
   team - Create a recommended FPL team based on past performance
+  build team - Create a recommended FPL team based on past performance
   injuries <name> - Check injury/status/news for a player
   form <name> - Show recent form for a player
   suggest <N> - Top N players by current form
@@ -472,6 +473,12 @@ def process_command(text):
 
     if cmd == "team":
         return fpl.create_team()
+
+    if cmd == "build":
+        if args.lower().strip() == "team":
+            return fpl.create_team()
+        else:
+            return "Usage: build team"
 
     if cmd == "chat":
         query = args.strip()
