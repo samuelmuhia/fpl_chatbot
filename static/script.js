@@ -3,38 +3,182 @@ let chatMessages = document.getElementById('chatMessages');
 let messageInput = document.getElementById('messageInput');
 let sendButton = document.getElementById('sendButton');
 let loadingOverlay = document.getElementById('loadingOverlay');
+let sessionList = document.getElementById('sessionList');
+let newSessionButton = document.getElementById('newSessionButton');
 
-// Initialize welcome message timestamp
-document.getElementById('welcomeTime').textContent = new Date().toLocaleTimeString();
+let currentSessionId = null;
+let currentSessionName = '';
 
-// Send message function
+function renderWelcomeMessage() {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = '🤖';
+
+    const content = document.createElement('div');
+    content.className = 'message-content';
+
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    header.textContent = 'FPL Assistant';
+
+    const messageText = document.createElement('div');
+    messageText.className = 'message-text';
+    messageText.innerHTML = `Welcome to FPL Assistant! I'm your AI-powered Fantasy Premier League manager.<br><br>
+        I can help you:<ul>
+            <li>Compare players by stats and form</li>
+            <li>Check injury status and news</li>
+            <li>Analyze recent performance</li>
+            <li>Get AI-powered transfer suggestions</li>
+            <li>Answer general FPL questions</li>
+        </ul>
+        <br>Type <code>help</code> to see all commands or click the commands on the left to try them out!`;
+
+    const time = document.createElement('div');
+    time.className = 'message-time';
+    time.textContent = new Date().toLocaleTimeString();
+
+    content.appendChild(header);
+    content.appendChild(messageText);
+    content.appendChild(time);
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(content);
+    chatMessages.appendChild(messageDiv);
+}
+
+function clearChatMessages() {
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+}
+
+async function initializeSessions() {
+    if (!newSessionButton || !sessionList) return;
+    newSessionButton.addEventListener('click', () => createNewSession('New Chat'));
+    await fetchSessions();
+}
+
+async function fetchSessions() {
+    try {
+        const response = await fetch('/sessions');
+        const data = await response.json();
+        const sessions = data.sessions || [];
+
+        if (!sessions.length) {
+            await createNewSession('New Chat');
+            return;
+        }
+
+        renderSessionList(sessions);
+        const activeSessionId = data.active_session_id || (sessions[0] && sessions[0].id);
+        const activeSession = sessions.find(session => Number(session.id) === Number(activeSessionId)) || sessions[0];
+        if (activeSession) {
+            await loadSession(activeSession.id, activeSession.name);
+        }
+    } catch (error) {
+        console.error('Error fetching sessions:', error);
+        if (sessionList) {
+            sessionList.innerHTML = '<div class="session-empty">Unable to load sessions.</div>';
+        }
+    }
+}
+
+function renderSessionList(sessions) {
+    if (!sessionList) return;
+    sessionList.innerHTML = '';
+
+    sessions.forEach(session => {
+        const item = document.createElement('button');
+        item.className = 'session-item';
+        item.dataset.sessionId = session.id;
+        item.type = 'button';
+        item.innerHTML = `<span class="session-name">${session.name || 'New Chat'}</span><span class="session-time">${new Date(session.created_at).toLocaleString()}</span>`;
+        item.addEventListener('click', () => loadSession(session.id, session.name));
+        if (Number(session.id) === Number(currentSessionId)) {
+            item.classList.add('active');
+        }
+        sessionList.appendChild(item);
+    });
+}
+
+async function createNewSession(name) {
+    try {
+        const response = await fetch('/sessions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name }),
+        });
+        const data = await response.json();
+        if (!data.session_id) {
+            throw new Error('Session creation failed');
+        }
+        await fetchSessions();
+    } catch (error) {
+        console.error('Error creating session:', error);
+        alert('Unable to create a new chat session. Please try again.');
+    }
+}
+
+async function loadSession(sessionId, sessionName) {
+    if (!sessionId) return;
+    currentSessionId = sessionId;
+    currentSessionName = sessionName || 'Chat';
+    updateActiveSessionUI();
+
+    try {
+        const response = await fetch(`/sessions/${sessionId}/history`);
+        if (!response.ok) {
+            throw new Error('Session history not found');
+        }
+        const data = await response.json();
+        clearChatMessages();
+        if (!data.history || !data.history.length) {
+            renderWelcomeMessage();
+        } else {
+            data.history.forEach(message => addMessage(message.message, message.role));
+        }
+    } catch (error) {
+        console.error('Error loading session history:', error);
+        clearChatMessages();
+        renderWelcomeMessage();
+    }
+}
+
+function updateActiveSessionUI() {
+    if (!sessionList) return;
+    const items = sessionList.querySelectorAll('.session-item');
+    items.forEach(item => {
+        item.classList.toggle('active', Number(item.dataset.sessionId) === Number(currentSessionId));
+    });
+}
+
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message) return;
+    if (!currentSessionId) {
+        await createNewSession('New Chat');
+    }
 
-    // Add user message to chat
     addMessage(message, 'user');
-
-    // Clear input and disable send button
     messageInput.value = '';
     sendButton.disabled = true;
     showLoading(true);
 
     try {
-        // Send message to Flask backend
         const response = await fetch('/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: message })
+            body: JSON.stringify({ message: message, session_id: currentSessionId }),
         });
 
         const data = await response.json();
-
-        // Add bot response to chat
         addMessage(data.response, 'bot');
-
     } catch (error) {
         console.error('Error:', error);
         addMessage('Sorry, I encountered an error. Please try again.', 'bot');
@@ -45,7 +189,6 @@ async function sendMessage() {
     }
 }
 
-// Add message to chat
 function addMessage(text, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}-message`;
@@ -75,19 +218,16 @@ function addMessage(text, type) {
 
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(content);
-
     chatMessages.appendChild(messageDiv);
     scrollToBottom();
 }
 
-// Format message text (handle line breaks, code, etc.)
 function formatMessage(text) {
     return text
         .replace(/\n/g, '<br>')
         .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
 
-// Handle Enter key press
 function handleKeyPress(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -95,47 +235,44 @@ function handleKeyPress(event) {
     }
 }
 
-// Insert command into input field
 function insertCommand(command) {
     messageInput.value = command;
     messageInput.focus();
     messageInput.select();
 }
 
-// Show/hide loading overlay
 function showLoading(show) {
     loadingOverlay.style.display = show ? 'flex' : 'none';
 }
 
-// Scroll to bottom of chat
 function scrollToBottom() {
     setTimeout(() => {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (chatMessages) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
     }, 100);
 }
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Focus on input field
-    messageInput.focus();
-
-    // Add some example interactions
+    if (messageInput) {
+        messageInput.focus();
+    }
+    if (sessionList) {
+        initializeSessions();
+    }
     setTimeout(() => {
         scrollToBottom();
     }, 500);
 });
 
-// Handle window resize for responsive design
 window.addEventListener('resize', () => {
     scrollToBottom();
 });
 
-// Add click-to-copy for code blocks
 document.addEventListener('click', (e) => {
     if (e.target.tagName === 'CODE') {
         const text = e.target.textContent;
         navigator.clipboard.writeText(text).then(() => {
-            // Show temporary feedback
             const original = e.target.textContent;
             e.target.textContent = '✓ Copied!';
             e.target.style.background = 'rgba(0, 255, 136, 0.2)';

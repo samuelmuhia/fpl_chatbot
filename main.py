@@ -11,7 +11,16 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from dotenv import load_dotenv
 from openai import OpenAI
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import initialize_database, create_user, find_user, save_chat
+from database import (
+    initialize_database,
+    create_user,
+    find_user,
+    save_chat,
+    create_chat_session,
+    list_chat_sessions,
+    get_chat_history,
+    get_chat_session,
+)
 
 # Load environment variables
 load_dotenv()
@@ -58,6 +67,28 @@ def register_user(username: str, password: str) -> bool:
 
 class FPLClient:
     BASE = "https://fantasy.premierleague.com/api"
+    POSITION_LABELS = {
+        1: 'Goalkeeper',
+        2: 'Defender',
+        3: 'Midfielder',
+        4: 'Forward'
+    }
+    POSITION_KEYWORD_MAP = {
+        'goalkeeper': 1,
+        'keeper': 1,
+        'gk': 1,
+        'defender': 2,
+        'defence': 2,
+        'defense': 2,
+        'def': 2,
+        'midfielder': 3,
+        'midfield': 3,
+        'mid': 3,
+        'forward': 4,
+        'striker': 4,
+        'attacker': 4,
+        'fw': 4
+    }
 
     def __init__(self):
         self.static = self._get(f"{self.BASE}/bootstrap-static/")
@@ -154,6 +185,44 @@ class FPLClient:
 
         return result
 
+    def best_player_by_position(self, position_name: str):
+        if not position_name:
+            return "Please specify a position such as goalkeeper, defender, midfielder, striker, or forward."
+
+        position_key = position_name.lower()
+        position_id = self.POSITION_KEYWORD_MAP.get(position_key)
+        if position_id is None:
+            return f"I couldn't recognize the position '{position_name}'. Try goalkeeper, defender, midfielder, striker, or forward."
+
+        candidates = [p for p in self.players if p.get('element_type') == position_id]
+        if not candidates:
+            return f"No players were found for position '{position_name}'."
+
+        top_players = sorted(
+            candidates,
+            key=lambda p: (
+                int(p.get('total_points', 0)),
+                float(p.get('form', 0.0)),
+                int(p.get('minutes', 0))
+            ),
+            reverse=True
+        )[:3]
+
+        position_label = self.POSITION_LABELS.get(position_id, position_name.title())
+        if position_key in ['striker', 'attacker', 'fw']:
+            position_label = 'Striker'
+
+        lines = [f"Top {len(top_players)} {position_label}s:" ]
+        for idx, player in enumerate(top_players, start=1):
+            summary = self.summarize_player(player)
+            lines.append(
+                f"{idx}. {summary['name']} ({summary['team']}) - "
+                f"PTS {summary['points']}, Form {summary['form']}, PPG {summary['points_per_game']}, "
+                f"£{summary['value']:.1f}m, {summary['minutes']} mins, {summary['selected_by']}% selected"
+            )
+
+        return "\n".join(lines)
+
     def injury_report(self, name):
         p = self.find_player(name)
         if not p:
@@ -235,6 +304,17 @@ def parse_message_intent(text):
         top_n = int(digit.group(1)) if digit else 5
         return "suggest", top_n
 
+    position_keywords = [
+        'goalkeeper', 'keeper', 'gk',
+        'defender', 'defence', 'defense', 'def',
+        'midfielder', 'midfield', 'mid',
+        'forward', 'striker', 'attacker', 'fw'
+    ]
+    if any(keyword in normalized for keyword in ["best", "top"]) and any(pos in normalized for pos in position_keywords):
+        for pos in position_keywords:
+            if pos in normalized:
+                return "best_position", pos
+
     if normalized.startswith("chat "):
         return "chat", text[len("chat "):].strip()
 
@@ -257,6 +337,7 @@ def print_help():
     return """Fantasy Premier League assistant help:
   Ask naturally like: "Compare Salah and Mane" or "How is Haaland playing?"
   compare <name1>,<name2> - Compare two players by stats
+  best <position> - Find the top 3 players in a role (striker, midfielder, defender, goalkeeper)
   injuries <name> - Check injury/status/news for a player
   form <name> - Show recent form for a player
   suggest <N> - Top N players by current form
@@ -312,6 +393,11 @@ def process_command(text):
         if args.isdigit():
             top_n = int(args)
         return f"Top suggestions by current FPL form:\n{fpl.team_suggestions(top_n)}"
+
+    if cmd == "best":
+        if not args:
+            return "Usage: best <position> (e.g. striker, midfielder, defender, goalkeeper)"
+        return fpl.best_player_by_position(args.strip())
 
     if cmd == "chat":
         query = args.strip()
@@ -370,26 +456,78 @@ fpl = FPLClient()
 
 @app.route('/')
 def home():
+    username = session.get('username', 'guest')
+    if not session.get('active_session_id'):
+        existing = list_chat_sessions(username)
+        if existing:
+            set_active_session_id(existing[0]['id'])
+        else:
+            set_active_session_id(create_chat_session(username, 'New Chat'))
+
     return render_template('index.html', username=session.get('username'))
+
+def get_active_session_id():
+    return session.get('active_session_id')
+
+
+def set_active_session_id(session_id: int):
+    session['active_session_id'] = session_id
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
     message = data.get('message', '').strip()
     username = session.get('username', 'guest')
+    session_id = data.get('session_id') or get_active_session_id()
 
     if not message:
         return jsonify({'response': 'Please enter a message.'})
 
-    save_chat(username, 'user', message)
+    if not session_id:
+        return jsonify({'response': 'No active chat session. Create a new chat first.'}), 400
+
+    save_chat(session_id, username, 'user', message)
     try:
         response = process_command(message)
-        save_chat(username, 'bot', response)
+        save_chat(session_id, username, 'bot', response)
         return jsonify({'response': response})
     except Exception as e:
         error_message = f'Error: {str(e)}'
-        save_chat(username, 'bot', error_message)
+        save_chat(session_id, username, 'bot', error_message)
         return jsonify({'response': error_message})
+
+
+@app.route('/sessions', methods=['GET', 'POST'])
+def sessions():
+    username = session.get('username', 'guest')
+    if request.method == 'GET':
+        sessions = list_chat_sessions(username)
+        return jsonify({
+            'sessions': sessions,
+            'active_session_id': get_active_session_id()
+        })
+
+    data = request.get_json() or {}
+    name = data.get('name', 'New Chat').strip() or 'New Chat'
+    session_id = create_chat_session(username, name)
+    set_active_session_id(session_id)
+    return jsonify({'session_id': session_id, 'name': name})
+
+
+@app.route('/sessions/<int:session_id>/history', methods=['GET'])
+def session_history(session_id):
+    username = session.get('username', 'guest')
+    session_obj = get_chat_session(session_id)
+    if not session_obj:
+        return jsonify({'error': 'Session not found.'}), 404
+
+    if session_obj['username'] != username:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    history = get_chat_history(session_id)
+    return jsonify({'session': session_obj, 'history': history})
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -402,6 +540,7 @@ def login():
             error = 'Please provide both username and password.'
         elif authenticate_user(username, password):
             session['username'] = username
+            session.pop('active_session_id', None)
             session.permanent = remember
             return redirect(url_for('home'))
         else:
@@ -429,12 +568,14 @@ def register():
                 error = 'That username already exists.'
             else:
                 session['username'] = username
+                session.pop('active_session_id', None)
                 return redirect(url_for('home'))
     return render_template('register.html', error=error)
 
 @app.route('/logout')
 def logout():
     session.pop('username', None)
+    session.pop('active_session_id', None)
     return redirect(url_for('home'))
 
 if __name__ == "__main__":

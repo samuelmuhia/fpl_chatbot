@@ -276,6 +276,143 @@ body {
     font-size: 0.8rem;
 }
 
+.session-panel {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 191, 255, 0.2);
+}
+
+.session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.session-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--accent-cyan);
+}
+
+.session-header p {
+    margin: 0;
+    color: var(--text-gray);
+    font-size: 0.85rem;
+}
+
+.new-session-button {
+    width: 100%;
+    text-align: center;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--primary-blue));
+    color: var(--primary-dark);
+    font-weight: 700;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 6px 18px rgba(0, 191, 255, 0.18);
+}
+
+.new-session-button:hover {
+    transform: translateY(-2px);
+    opacity: 0.98;
+    box-shadow: 0 10px 24px rgba(0, 191, 255, 0.22);
+}
+
+.new-session-button:active {
+    transform: translateY(0);
+}
+
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 191, 255, 0.15);
+    background: rgba(26, 0, 51, 0.7);
+    color: var(--text-light);
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.session-item:hover,
+.session-item.active {
+    background: rgba(0, 191, 255, 0.15);
+    transform: translateX(4px);
+}
+
+.session-name {
+    font-weight: 600;
+    color: var(--accent-green);
+    font-size: 0.95rem;
+}
+
+.session-time {
+    color: var(--text-gray);
+    font-size: 0.75rem;
+}
+
+.session-empty {
+    color: var(--text-gray);
+    font-size: 0.9rem;
+    padding: 12px 10px;
+}
+
+.sidebar-auth {
+    margin-bottom: 22px;
+}
+
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: var(--primary-dark);
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+}
+
+.profile-name {
+    color: var(--text-light);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.sidebar-auth-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.sidebar-auth-buttons .auth-button {
+    width: 100%;
+    justify-content: center;
+}
+
 .sidebar-footer {
     margin-top: auto;
     padding-top: 20px;
@@ -428,23 +565,25 @@ body {
 }
 
 .send-button {
-    padding: 12px 20px;
+    min-width: 120px;
+    padding: 14px 20px;
     background: linear-gradient(135deg, var(--accent-cyan), var(--primary-blue));
     color: var(--primary-dark);
     border: none;
-    border-radius: 25px;
+    border-radius: 999px;
     cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
+    font-weight: 700;
+    transition: all 0.25s ease;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 10px rgba(0, 191, 255, 0.3);
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 6px 18px rgba(0, 191, 255, 0.2);
 }
 
 .send-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 191, 255, 0.5);
+    box-shadow: 0 10px 26px rgba(0, 191, 255, 0.3);
 }
 
 .send-button:disabled {
@@ -454,7 +593,7 @@ body {
 }
 
 .send-text {
-    display: none;
+    display: inline;
 }
 
 .input-hint {
@@ -513,26 +652,20 @@ body {
 
     .sidebar {
         width: 100%;
-        height: 200px;
+        height: auto;
         border-right: none;
         border-bottom: 1px solid rgba(0, 191, 255, 0.2);
         padding: 15px;
     }
 
-    .command-list {
-        display: flex;
-        overflow-x: auto;
-        gap: 10px;
-        margin-bottom: 15px;
+    .session-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
     }
 
-    .command-item {
-        flex-shrink: 0;
-        width: 200px;
-        margin-bottom: 0;
-        border-left: none;
-        border-top: 3px solid var(--accent-cyan);
-        border-radius: 8px 8px 0 0;
+    .new-session-button {
+        width: 100%;
     }
 
     .sidebar-footer {
