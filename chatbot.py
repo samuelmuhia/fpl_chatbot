@@ -14,10 +14,14 @@ if not api_key:
     raise RuntimeError("OPENAI_API_KEY must be set in .env or environment variables")
 
 # Initialize OpenAI client
-client = OpenAI(api_key=api_key)
+# client = OpenAI(api_key=api_key)
+client = None
 
 def gpt_fallback(user_message: str) -> str:
     """Send message to OpenAI as fallback."""
+    if client is None:
+        return "OpenAI client not available. Please check your API key configuration."
+
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",

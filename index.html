@@ -7,225 +7,120 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
                 <span class="logo-icon">⚽</span>
-                <span>FPL Assistant</span>
+                <span class="logo-text">FPL Assistant</span>
             </div>
-            <ul class="nav-menu">
-                <li><a href="#home">Home</a></li>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#chat">Chatbot</a></li>
-                <li><a href="#contact">Contact</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <div class="hero-content">
-            <h1 class="hero-title">FPL Assistant</h1>
-            <p class="hero-subtitle">Your AI-Powered Fantasy Premier League Manager</p>
-            <p class="hero-description">
-                Compare players, track injuries, analyze form, and make smarter transfers with real-time FPL data.
-            </p>
-            <div class="hero-buttons">
-                <button class="btn btn-primary" onclick="scrollToChat()">Try Chat Now</button>
-                <button class="btn btn-secondary">Learn More</button>
-            </div>
-        </div>
-        <div class="hero-image">
-            <div class="player-showcase">
-                <div class="player-card">🏆</div>
-                <div class="player-card">⭐</div>
-                <div class="player-card">🎯</div>
-                <div class="player-card">💪</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="features">
-        <div class="container">
-            <h2>Key Features</h2>
-            <div class="features-grid">
-                <!-- Feature 1 -->
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3>Player Comparison</h3>
-                    <p>Compare two players side-by-side to analyze stats, form, and value for money.</p>
-                    <code>compare Salah,Mane</code>
-                </div>
-
-                <!-- Feature 2 -->
-                <div class="feature-card">
-                    <div class="feature-icon">🏥</div>
-                    <h3>Injury Tracking</h3>
-                    <p>Get real-time injury status and latest news for any player in the Premier League.</p>
-                    <code>injuries KDB</code>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="feature-card">
-                    <div class="feature-icon">📈</div>
-                    <h3>Form Analysis</h3>
-                    <p>Analyze recent form trends and points per game to identify in-form players.</p>
-                    <code>form Haaland</code>
-                </div>
-
-                <!-- Feature 4 -->
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Smart Suggestions</h3>
-                    <p>Get AI-powered recommendations for your next Fantasy Premier League transfers.</p>
-                    <code>suggest 5</code>
-                </div>
-
-                <!-- Feature 5 -->
-                <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
-                    <h3>AI Chat</h3>
-                    <p>Ask questions about transfers, team composition, and strategy with our AI assistant.</p>
-                    <code>chat What transfers should I make?</code>
-                </div>
-
-                <!-- Feature 6 -->
-                <div class="feature-card">
-                    <div class="feature-icon">⚙️</div>
-                    <h3>Real-Time Data</h3>
-                    <p>All data is fetched live from the official Fantasy Premier League API.</p>
-                    <code>Always up-to-date</code>
+            <div>
+                <div class="header-subtitle">Your AI-Powered Fantasy Premier League Manager</div>
+                <div class="auth-buttons">
+                    {% if username %}
+                        <span class="auth-welcome">Hello, {{ username }}!</span>
+                        <a class="auth-button" href="/logout">Logout</a>
+                    {% else %}
+                        <a class="auth-button" href="/login">Sign In</a>
+                        <a class="auth-button secondary" href="/register">Register</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
-    </section>
+    </header>
 
-    <!-- How to Use Section -->
-    <section class="how-to-use">
-        <div class="container">
-            <h2>How to Use</h2>
-            <div class="commands-grid">
-                <div class="command-item">
+    <!-- Main Chat Container -->
+    <div class="chat-container">
+        <!-- Sidebar with Commands -->
+        <div class="sidebar">
+            <h3>Try These Phrases</h3>
+            <div class="command-list">
+                <div class="command-item" onclick="insertCommand('help')">
                     <code>help</code>
-                    <span>Show all available commands</span>
+                    <span>Show help and examples</span>
                 </div>
-                <div class="command-item">
-                    <code>compare Player1,Player2</code>
+                <div class="command-item" onclick="insertCommand('Compare Salah and Mane')">
+                    <code>Compare Salah and Mane</code>
                     <span>Compare two players</span>
                 </div>
-                <div class="command-item">
-                    <code>injuries PlayerName</code>
+                <div class="command-item" onclick="insertCommand('injuries KDB')">
+                    <code>injuries &lt;name&gt;</code>
                     <span>Check injury status</span>
                 </div>
-                <div class="command-item">
-                    <code>form PlayerName</code>
-                    <span>Analyze recent form</span>
+                <div class="command-item" onclick="insertCommand('form Haaland')">
+                    <code>form &lt;name&gt;</code>
+                    <span>Show recent form</span>
                 </div>
-                <div class="command-item">
-                    <code>suggest N</code>
-                    <span>Get top N suggestions</span>
+                <div class="command-item" onclick="insertCommand('suggest 5')">
+                    <code>suggest &lt;N&gt;</code>
+                    <span>Top N suggestions</span>
                 </div>
-                <div class="command-item">
-                    <code>quit</code>
-                    <span>Exit the chatbot</span>
+                <div class="command-item" onclick="insertCommand('What transfers should I make this week?')">
+                    <code>What transfers should I make this week?</code>
+                    <span>Natural transfer advice</span>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Chat Section -->
-    <section id="chat" class="chat-section">
-        <div class="container">
-            <h2>Try the Chatbot</h2>
-            <p class="chat-subtitle">Run the chatbot locally to start managing your Fantasy Premier League team</p>
-            <div class="chat-box">
-                <div class="chat-header">
-                    <h3>FPL Assistant Terminal</h3>
-                </div>
-                <div class="chat-display">
-                    <div class="chat-message bot">
-                        🤖 FPL Management Chatbot (Type 'help' for commands, 'quit' to exit)
+            <div class="sidebar-footer">
+                <p>💡 <strong>Tip:</strong> Ask naturally or click a phrase to auto-fill it.</p>
+                <p>🔄 Data updates live from FPL API</p>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot-message">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <div class="message-header">FPL Assistant</div>
+                        <div class="message-text">
+                            Welcome to FPL Assistant! I'm your AI-powered Fantasy Premier League manager.<br><br>
+                            I can help you:
+                            <ul>
+                                <li>Compare players by stats and form</li>
+                                <li>Check injury status and news</li>
+                                <li>Analyze recent performance</li>
+                                <li>Get AI-powered transfer suggestions</li>
+                                <li>Answer general FPL questions</li>
+                            </ul>
+                            <br>Type <code>help</code> to see all commands or click the commands on the left to try them out!
+                        </div>
+                        <div class="message-time" id="welcomeTime"></div>
                     </div>
-                    <div class="chat-message bot">
-                        ----- Ready for input -----
-                    </div>
-                </div>
-                <div class="installation-guide">
-                    <h4>Quick Start:</h4>
-                    <pre><code>cd c:\Users\Samuel Muhia\OneDrive\Desktop\chatbot
-python main.py</code></pre>
-                    <p>Make sure you have set your OPENAI_API_KEY in the .env file</p>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Tech Stack Section -->
-    <section class="tech-stack">
-        <div class="container">
-            <h2>Technology Stack</h2>
-            <div class="tech-grid">
-                <div class="tech-item">
-                    <h4>Backend</h4>
-                    <ul>
-                        <li>Python 3.9+</li>
-                        <li>OpenAI API</li>
-                        <li>Requests Library</li>
-                    </ul>
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <input
+                        type="text"
+                        id="messageInput"
+                        placeholder="Ask naturally: 'How is Salah playing?' or 'Compare Salah and Mane'"
+                        autocomplete="off"
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button id="sendButton" onclick="sendMessage()" class="send-button">
+                        <span class="send-icon">📤</span>
+                        <span class="send-text">Send</span>
+                    </button>
                 </div>
-                <div class="tech-item">
-                    <h4>Data Source</h4>
-                    <ul>
-                        <li>Official FPL API</li>
-                        <li>Real-time player data</li>
-                        <li>Live match statistics</li>
-                    </ul>
-                </div>
-                <div class="tech-item">
-                    <h4>Frontend</h4>
-                    <ul>
-                        <li>HTML5</li>
-                        <li>CSS3</li>
-                        <li>Responsive Design</li>
-                    </ul>
+                <div class="input-hint">
+                    Press Enter to send • Type "help" for commands • Click sidebar commands to auto-fill
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>FPL Assistant</h4>
-                    <p>Your AI-powered Fantasy Premier League management tool.</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#chat">Chatbot</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li><a href="https://fantasy.premierleague.com" target="_blank">Official FPL</a></li>
-                        <li><a href="https://openai.com" target="_blank">OpenAI</a></li>
-                        <li><a href="https://github.com" target="_blank">GitHub</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 FPL Assistant. All rights reserved.</p>
-                <p>Fantasy Premier League is owned by the Premier League.</p>
-            </div>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-text">Processing your request...</div>
         </div>
-    </footer>
+    </div>
 
     <script src="script.js"></script>
 </body>

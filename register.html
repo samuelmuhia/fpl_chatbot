@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - FPL Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">⚽</span>
+                <span class="logo-text">FPL Assistant</span>
+            </div>
+            <div class="auth-buttons">
+                <a class="auth-button secondary" href="/login">Sign In</a>
+                <a class="auth-button" href="/">Back to Chat</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2>Create Your Account</h2>
+            {% if error %}
+                <div class="form-message">{{ error }}</div>
+            {% endif %}
+            <form method="POST" class="auth-form">
+                <label>Username
+                    <input type="text" name="username" placeholder="Choose a username" required>
+                </label>
+                <label>Password
+                    <input type="password" name="password" placeholder="Create a password" required>
+                    <small>At least 8 characters with uppercase, lowercase, and number</small>
+                </label>
+                <label>Confirm Password
+                    <input type="password" name="confirm" placeholder="Confirm your password" required>
+                </label>
+                <button type="submit">Register</button>
+            </form>
+            <div class="form-footer">
+                Already have an account? <a href="/login">Sign in</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
