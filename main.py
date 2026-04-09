@@ -11,12 +11,10 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from dotenv import load_dotenv
 from openai import OpenAI
 from werkzeug.security import generate_password_hash, check_password_hash
+from database import initialize_database, create_user, find_user, save_chat
 
 # Load environment variables
 load_dotenv()
-
-# Simple in-memory auth store for demo purposes
-USERS = {"admin": generate_password_hash("password123")}
 
 # Initialize OpenAI client (optional, for general chat mode)
 api_key = os.getenv("OPENAI_API_KEY")
@@ -27,9 +25,16 @@ else:
     # client = OpenAI(api_key=api_key)
     client = None
 
+# Initialize database using the provided token
+try:
+    db_connection = initialize_database(api_key)
+    db_connection.close()
+except RuntimeError as e:
+    print(f"Database initialization warning: {e}")
+
 
 def authenticate_user(username: str, password: str) -> bool:
-    stored_hash = USERS.get(username)
+    stored_hash = find_user(username)
     if not stored_hash:
         return False
     return check_password_hash(stored_hash, password)
@@ -49,10 +54,7 @@ def validate_password(password: str) -> str:
 
 
 def register_user(username: str, password: str) -> bool:
-    if username in USERS:
-        return False
-    USERS[username] = generate_password_hash(password)
-    return True
+    return create_user(username, generate_password_hash(password))
 
 class FPLClient:
     BASE = "https://fantasy.premierleague.com/api"
@@ -361,7 +363,7 @@ def process_command(text):
 
 
 # Flask app
-app = Flask(__name__, template_folder='.')
+app = Flask(__name__, template_folder='.', static_folder='static')
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey123')
 app.permanent_session_lifetime = timedelta(days=7)
 fpl = FPLClient()
@@ -374,15 +376,20 @@ def home():
 def chat():
     data = request.get_json()
     message = data.get('message', '').strip()
+    username = session.get('username', 'guest')
 
     if not message:
         return jsonify({'response': 'Please enter a message.'})
 
+    save_chat(username, 'user', message)
     try:
         response = process_command(message)
+        save_chat(username, 'bot', response)
         return jsonify({'response': response})
     except Exception as e:
-        return jsonify({'response': f'Error: {str(e)}'})
+        error_message = f'Error: {str(e)}'
+        save_chat(username, 'bot', error_message)
+        return jsonify({'response': error_message})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
