@@ -223,6 +223,73 @@ class FPLClient:
 
         return "\n".join(lines)
 
+    def create_team(self):
+        # Select players based on past performance (points per game)
+        active_players = [p for p in self.players if p.get('minutes', 0) > 0 and float(p.get('points_per_game', 0)) > 0]
+
+        # Sort by points per game descending
+        active_players.sort(key=lambda p: float(p.get('points_per_game', 0)), reverse=True)
+
+        # Group by position
+        gk = [p for p in active_players if p['element_type'] == 1]
+        def_players = [p for p in active_players if p['element_type'] == 2]
+        mid = [p for p in active_players if p['element_type'] == 3]
+        fwd = [p for p in active_players if p['element_type'] == 4]
+
+        # Select top players for each position
+        selected_gk = gk[:1]
+        selected_def = def_players[:4]
+        selected_mid = mid[:4]
+        selected_fwd = fwd[:3]
+
+        team = selected_gk + selected_def + selected_mid + selected_fwd
+
+        if len(team) < 11:
+            return "Not enough active players to form a complete team. Try again later."
+
+        # Calculate total cost (now_cost is in 0.1m units)
+        total_cost = sum(p['now_cost'] for p in team)
+
+        # Check team constraints: max 3 per team
+        team_counts = {}
+        for p in team:
+            team_id = p['team']
+            team_counts[team_id] = team_counts.get(team_id, 0) + 1
+
+        over_limit = [self.teams.get(tid, {}).get('name', f'Team {tid}') for tid, count in team_counts.items() if count > 3]
+
+        # Format response
+        lines = ["Recommended FPL Team based on past performance (points per game):"]
+        lines.append("Goalkeeper:")
+        for p in selected_gk:
+            summary = self.summarize_player(p)
+            lines.append(f"  {summary['name']} ({summary['team']}) - £{summary['value']:.1f}m - PPG {summary['points_per_game']}")
+
+        lines.append("Defenders:")
+        for p in selected_def:
+            summary = self.summarize_player(p)
+            lines.append(f"  {summary['name']} ({summary['team']}) - £{summary['value']:.1f}m - PPG {summary['points_per_game']}")
+
+        lines.append("Midfielders:")
+        for p in selected_mid:
+            summary = self.summarize_player(p)
+            lines.append(f"  {summary['name']} ({summary['team']}) - £{summary['value']:.1f}m - PPG {summary['points_per_game']}")
+
+        lines.append("Forwards:")
+        for p in selected_fwd:
+            summary = self.summarize_player(p)
+            lines.append(f"  {summary['name']} ({summary['team']}) - £{summary['value']:.1f}m - PPG {summary['points_per_game']}")
+
+        lines.append(f"\nTotal cost: £{total_cost/10:.1f}m (FPL Budget: £100m)")
+
+        if total_cost > 1000:
+            lines.append("⚠️ Warning: Team exceeds budget. Consider cheaper alternatives or transfers.")
+
+        if over_limit:
+            lines.append(f"⚠️ Warning: Too many players from {', '.join(over_limit)}. Max 3 per team allowed.")
+
+        return "\n".join(lines)
+
     def injury_report(self, name):
         p = self.find_player(name)
         if not p:
@@ -315,6 +382,9 @@ def parse_message_intent(text):
             if pos in normalized:
                 return "best_position", pos
 
+    if any(keyword in normalized for keyword in ["create", "build", "make", "suggest"]) and "team" in normalized:
+        return "create_team", None
+
     if normalized.startswith("chat "):
         return "chat", text[len("chat "):].strip()
 
@@ -338,6 +408,7 @@ def print_help():
   Ask naturally like: "Compare Salah and Mane" or "How is Haaland playing?"
   compare <name1>,<name2> - Compare two players by stats
   best <position> - Find the top 3 players in a role (striker, midfielder, defender, goalkeeper)
+  team - Create a recommended FPL team based on past performance
   injuries <name> - Check injury/status/news for a player
   form <name> - Show recent form for a player
   suggest <N> - Top N players by current form
@@ -399,6 +470,9 @@ def process_command(text):
             return "Usage: best <position> (e.g. striker, midfielder, defender, goalkeeper)"
         return fpl.best_player_by_position(args.strip())
 
+    if cmd == "team":
+        return fpl.create_team()
+
     if cmd == "chat":
         query = args.strip()
         if not query:
@@ -436,6 +510,14 @@ def process_command(text):
     if intent == "suggest":
         top_n = payload if isinstance(payload, int) else 5
         return f"Top suggestions by current FPL form:\n{fpl.team_suggestions(top_n)}"
+
+    if intent == "best_position":
+        if not payload:
+            return "Tell me the position you want the best players for, for example: Who is the best midfielder?"
+        return fpl.best_player_by_position(payload)
+
+    if intent == "create_team":
+        return fpl.create_team()
 
     if intent == "chat":
         if client is None:
